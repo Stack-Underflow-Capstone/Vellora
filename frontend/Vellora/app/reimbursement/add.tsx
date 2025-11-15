@@ -185,12 +185,14 @@ export default function AddCustomRatePage() {
                   value={newCategoryName}
                   onChangeText={setNewCategoryName}
                 />
-                <CurrencyInput
-                  label=""
-                  value={newCategoryRate}
-                  onChangeText={setNewCategoryRate}
-                  style={{ width: 90 }}
-                />
+                <View style={{width:90}}>
+                  <CurrencyInput
+                    label=""
+                    value={newCategoryRate}
+                    onChangeText={setNewCategoryRate}
+                    // style={{ width: 90 }}
+                  />
+                </View>
                 <Pressable
                   onPress={commitNewCategory}
                   style={{
@@ -213,12 +215,15 @@ export default function AddCustomRatePage() {
                 <View style={rateStyles.minusIcon} />
               </Pressable>
               <Text style={rateStyles.rateRowText}>{c.name}</Text>
-              <CurrencyInput
-                label=""
-                value={c.rate}
-                onChangeText={(v) => updateCategoryRate(c.id, v)}
-                style={{ width: 90 }}
-              />
+              <View style={{ width: 90 }}>
+                <CurrencyInput
+                  label=""
+                  value={c.rate}
+                  onChangeText={(v) => updateCategoryRate(c.id, v)}
+                  // style={{ width: 90 }}
+                />
+
+              </View>
             </View>
           ))}
 
