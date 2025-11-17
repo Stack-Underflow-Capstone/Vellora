@@ -1,15 +1,22 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
-import { createTripPayload, TripStatus } from "../services/Trips";
+import { createManualTripPayload, createTripPayload } from "../services/Trips";
 
 // storage box that holds all the trip information for later (start/stop) api calls
 export interface TripData {
+    // required by createTripPayload
     startAddress: string;
     purpose?: string | null;
     vechicle?: string | null;
     rateCustomizationid: string;
     rateCategoryId: string;
+
+    // extra UI fields (not in API payload)
     parkingCost?: number;
     gasCost?: number;
+
+    // fields needed for manual trips later
+    endAddress?: string;
+    miles?: number;
 }
 
 // type safety for typescript to shut up
@@ -20,9 +27,15 @@ interface TripContextType {
     clearTripData: () => void;                          // a function that lets you empty the box
     updateTripField: <K extends keyof TripData>(field: K, value: TripData[K]) => void;          // a function that lets you change a signle field (for example, purpose)
 
-    // format data for the API
+    // format data for LIVE TRIP CREATION API
     getCreateTripPayload: () => createTripPayload;              // format for API use
+
+    // format data for MANUAL TRIP CREATION API
+    getCreateManualTripPayload: () => createTripPayload;
+
+    // validation
     isTripDataComplete: () => boolean;                          // check if required fields exist before POSTing
+    isManualTripDataComplete: () => boolean;
 }
 
 // create the actual context. this is a box that doesn't store data yet. define what could be inside
@@ -64,9 +77,9 @@ export const TripProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
     };
 
-    // format data for the trip api
+    // format data for the LIVE TRIP START api
     const getCreateTripPayload = (): createTripPayload => {
-        if (!tripData) {
+        if (!tripData || !isTripDataComplete()) {
             throw new Error('No trip data available');
         }
 
@@ -79,10 +92,40 @@ export const TripProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     };
 
-    // check if all required data is present
+    // format data for the MANUAL TRIP LOG api
+    const getCreateManualTripPayload = (): createManualTripPayload => {
+        if (!tripData || !isManualTripDataComplete()) {
+            throw new Error('Manual trip data incomplete');
+        }
+
+        return {
+            startAddress: tripData.startAddress,
+            endAddress: tripData.endAddress!,
+            startedAt: new Date(),
+            endedAt: new Date(),
+            miles: tripData.miles!,
+            geometry: null,
+            rateCustomizationId: tripData.rateCustomizationid,
+            rateCategoryId: tripData.rateCategoryId,
+            expenses: []
+        };
+    }
+
+    // check if all required data is present for live trips
     const isTripDataComplete = (): boolean => {
         return !!(
             // tripData?.startAddress &&
+            tripData?.rateCustomizationid &&
+            tripData?.rateCategoryId
+        );
+    };
+
+    // check if amnual trip data is complete
+    const isManualTripDataComplete = (): boolean => {
+        return !!(
+            tripData?.startAddress &&
+            tripData?.endAddress &&
+            tripData?.miles &&
             tripData?.rateCustomizationid &&
             tripData?.rateCategoryId
         );
@@ -97,7 +140,9 @@ export const TripProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             clearTripData,
             updateTripField,
             getCreateTripPayload,
+            getCreateManualTripPayload,
             isTripDataComplete,
+            isManualTripDataComplete,
         }}>
             {children}
         </TripContext.Provider>
