@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "../constants/api";
 import { tokenStorage } from "./tokenStorage";
+import { ApiError, handleResponse } from "./helpers";
 
 export type RateCategory = {
 	id: string;
@@ -29,7 +30,7 @@ export type CreateRateCategoryPayload = {
 	cost_per_mile: number;
 };
 
-class ApiError extends Error {
+/* class ApiError extends Error {
 	status?: number;
 	constructor(message: string, status?: number) {
 		super(message);
@@ -37,7 +38,7 @@ class ApiError extends Error {
 	}
 }
 
-async function handleResponse<T>(response: Response): Promise<T> {
+/* async function handleResponse<T>(response: Response): Promise<T> {
 	if (response.ok) {
 		return response.json() as Promise<T>;
 	}
@@ -51,7 +52,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 		// ignore json parse issues
 	}
 	throw new ApiError(message, response.status);
-}
+} */
 
 export async function getRateCustomizations(
 	token?: string

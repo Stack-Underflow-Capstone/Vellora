@@ -9,3 +9,7 @@ export const AUTH_ROUTES = {
 	providerCallback: (provider: string) =>
 		`${API_BASE_URL}/auth/providers/${provider}/callback`,
 };
+
+export const TRIP_ROUTES = {
+	createTrip: `${API_BASE_URL}/trips/manual`
+}
