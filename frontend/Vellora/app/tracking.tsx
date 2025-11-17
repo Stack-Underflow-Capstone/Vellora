@@ -11,6 +11,7 @@ import { vehicleItems } from '../app/constants/dropdownOptions';
 import UserLocationMap from './components/UserLocationMap';
 import { useLocationTracking } from './hooks/useLocationTracking';
 import { useRateOptions } from './hooks/useRateOptions';
+import { useTrip } from './contexts/TripContext';
 
 const MAPBOX_KEY = process.env.EXPO_PUBLIC_API_KEY_MAPBOX_PUBLIC_ACCESS_TOKEN;
 Mapbox.setAccessToken(`${MAPBOX_KEY}`);
@@ -25,6 +26,7 @@ const Tracking = () => {
   const [parking, setParking] = useState<string>('');
   const [gas, setGas] = useState<string>('');
   const [isStarting, setIsStarting] = useState(false);
+  const [startAddress, setStartAddress] = useState<string>('');   // current location
 
   // initialize router hook for navigation
   const router = useRouter();
@@ -35,14 +37,67 @@ const Tracking = () => {
   // fetch rates
   const { rateItems, categoryItems, loading, error, updateSelectedRate, selectedRate } = useRateOptions();
 
+  // use the trip context
+  const { tripData, setTripData, updateTripField } = useTrip();
+
   // handle rate selection
   const handleRateChange = (selectedRateId: string | null) => {
     console.log('Rate changed to: ', selectedRate);
     setRate(selectedRateId);
     setType(null);      // reset category when rate changes
     updateSelectedRate(selectedRateId);
+
+    // update trip data in the context
+    if (selectedRateId) {
+      updateTripField('rateCustomizationid', selectedRateId);
+    }
   };
 
+  // handle category selection
+  const handleCategoryChange = (categoryId: string | null) => {
+    setType(categoryId);
+    
+    // update trip data
+    if (categoryId) {
+      updateTripField('rateCategoryId', categoryId);
+    }
+  };
+
+  // handle vehicle selection
+  const handleVehicleChange = (vehicleValue: string | null) => {
+    setVehicle(vehicleValue);
+    
+    // update trip data
+    if (vehicleValue) {
+      updateTripField('vehicle', vehicleValue);
+    }
+
+  };
+
+  // handle notes/purpose change
+  const handleNotesChange = (text: string) => {
+    setNotes(text);
+    updateTripField('purpose', text);
+  };
+
+  // handle parking cost change
+  const handleParkingChange = (text: string) => {
+    setParking(text);
+    const cost = parseFloat(text) || 0;
+    updateTripField('parkingCost', cost);
+  };
+
+  // handle gas cost change
+  const handleGasChange = (text: string) => {
+    setGas(text);
+    const cost = parseFloat(text) || 0;
+    updateTripField('gasCost', cost);
+  };
+
+
+  // const getCurrentLocationAddress = async (): Promise<string> => {
+
+  // }
 
   useEffect(() => {
     if (isTracking && isStarting) {
@@ -50,6 +105,29 @@ const Tracking = () => {
       setIsStarting(false);
     }
   }, [isTracking, isStarting]);
+
+
+  // prepare trip data when all required fields are filled
+  useEffect(() => {
+    const prepareTripData = async () => {
+      if (vehicle && type && rate) {
+        // const currentAddress = await getCurrentLocationAddress();
+        // setStartAddress(currentAddress);
+        
+        setTripData({
+          // startAddress: currentAddress,
+          purpose: notes,
+          vehicle: vehicle,
+          rateCustomizationid: rate,
+          rateCategoryId: type,
+          parkingCost: parseFloat(parking) || 0,
+          gasCost: parseFloat(gas) || 0,
+        });
+      }
+    };
+
+    prepareTripData();
+  }, [vehicle, type, rate, notes, parking, gas]);
 
   // show loading state
   if (loading) {
@@ -83,6 +161,20 @@ const Tracking = () => {
 
     console.log('STARTING...');
     setIsStarting(true);
+
+    // finalize trip data with current location
+    // const currentAddress = await getCurrentLocationAddress();
+    // setStartAddress(currentAddress);
+    
+    setTripData({
+      // startAddress: currentAddress,
+      purpose: notes,
+      vehicle: vehicle,
+      rateCustomizationid: rate,
+      rateCategoryId: type,
+      parkingCost: parseFloat(parking) || 0,
+      gasCost: parseFloat(gas) || 0,
+    });
 
     const success = await startTracking();
 
@@ -132,12 +224,12 @@ const Tracking = () => {
       <TripDetailsForm 
 
         // state vairables
-        notes={notes} setNotes={setNotes}
-        vehicle={vehicle} setVehicle={setVehicle}
-        type={type} setType={setType}
+        notes={notes} setNotes={handleNotesChange}
+        vehicle={vehicle} setVehicle={handleVehicleChange}
+        type={type} setType={handleCategoryChange}
         rate={rate} setRate={handleRateChange}
-        parking={parking} setParking={setParking}
-        gas={gas} setGas={setGas}
+        parking={parking} setParking={handleParkingChange}
+        gas={gas} setGas={handleGasChange}
 
         // mock data arrays
         vehicleItems={vehicleItems}
