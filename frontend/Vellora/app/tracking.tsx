@@ -26,7 +26,6 @@ const Tracking = () => {
   const [parking, setParking] = useState<string>('');
   const [gas, setGas] = useState<string>('');
   const [isStarting, setIsStarting] = useState(false);
-  const [startAddress, setStartAddress] = useState<string>('');   // current location
 
   // initialize router hook for navigation
   const router = useRouter();
@@ -38,7 +37,7 @@ const Tracking = () => {
   const { rateItems, categoryItems, loading, error, updateSelectedRate, selectedRate } = useRateOptions();
 
   // use the trip context
-  const { tripData, setTripData, updateTripField } = useTrip();
+  const { tripData, setTripData, updateTripField, getCreateTripPayload, isTripDataComplete } = useTrip();
 
   // handle rate selection
   const handleRateChange = (selectedRateId: string | null) => {
@@ -69,7 +68,7 @@ const Tracking = () => {
     
     // update trip data
     if (vehicleValue) {
-      updateTripField('vehicle', vehicleValue);
+      updateTripField('vechicle', vehicleValue);
     }
 
   };
@@ -95,10 +94,6 @@ const Tracking = () => {
   };
 
 
-  // const getCurrentLocationAddress = async (): Promise<string> => {
-
-  // }
-
   useEffect(() => {
     if (isTracking && isStarting) {
       router.push('/trackingInAction');
@@ -109,24 +104,21 @@ const Tracking = () => {
 
   // prepare trip data when all required fields are filled
   useEffect(() => {
-    const prepareTripData = async () => {
-      if (vehicle && type && rate) {
-        // const currentAddress = await getCurrentLocationAddress();
-        // setStartAddress(currentAddress);
+    if (vehicle && type && rate) {
+      // const currentAddress = await getCurrentLocationAddress();
+      // setStartAddress(currentAddress);
         
-        setTripData({
-          // startAddress: currentAddress,
-          purpose: notes,
-          vehicle: vehicle,
-          rateCustomizationid: rate,
-          rateCategoryId: type,
-          parkingCost: parseFloat(parking) || 0,
-          gasCost: parseFloat(gas) || 0,
-        });
-      }
-    };
+      setTripData({
+        startAddress: '',
+        purpose: notes,
+        vechicle: vehicle,
+        rateCustomizationid: rate,
+        rateCategoryId: type,
+        parkingCost: parseFloat(parking) || 0,
+        gasCost: parseFloat(gas) || 0,
+      });
+    }
 
-    prepareTripData();
   }, [vehicle, type, rate, notes, parking, gas]);
 
   // show loading state
@@ -164,17 +156,25 @@ const Tracking = () => {
 
     // finalize trip data with current location
     // const currentAddress = await getCurrentLocationAddress();
-    // setStartAddress(currentAddress);
-    
+
+    const currentLocation = "Current Location"; // CHANGE THIS
+
     setTripData({
-      // startAddress: currentAddress,
+      startAddress: currentLocation,
       purpose: notes,
-      vehicle: vehicle,
+      vechicle: vehicle,
       rateCustomizationid: rate,
       rateCategoryId: type,
       parkingCost: parseFloat(parking) || 0,
       gasCost: parseFloat(gas) || 0,
     });
+
+
+    console.log('Trip data ready for API:', {
+      rawData: tripData,
+      apiPayload: getCreateTripPayload(),
+      isComplete: isTripDataComplete(),
+    })
 
     const success = await startTracking();
 
@@ -193,6 +193,7 @@ const Tracking = () => {
           title='Start Trip'
           onPress={handleStartTrip}     // start the trip when footer button is pressed
           className=''                  // for additional styling
+          disabled={!isTripDataComplete()}
         />
       }
 
