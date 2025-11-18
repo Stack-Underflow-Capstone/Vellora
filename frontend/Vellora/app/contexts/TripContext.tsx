@@ -7,7 +7,7 @@ export interface TripData {
     startAddress: string;
     purpose?: string | null;
     vechicle?: string | null;
-    rateCustomizationid: string;
+    rateCustomizationId: string;
     rateCategoryId: string;
 
     // extra UI fields (not in API payload)
@@ -66,13 +66,13 @@ export const TripProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             } 
             // if the trip does not exist, create a minimal object so that fiel updates still work
             else {
-                // create initial object with required fields as empty strings
-                return {
-                    [field]: value,
+                const newTripData: TripData = {
                     startAddress: "",
-                    rateCustomizationid: "",
-                    rateCategoryId: ""
-                } as TripData;
+                    rateCustomizationId: "",
+                    rateCategoryId: "",
+                    [field]: value
+                };
+                return newTripData;
             }
         });
     };
@@ -87,7 +87,7 @@ export const TripProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             startAddress: tripData.startAddress,
             purpose: tripData.purpose || null,
             vechicle: tripData.vechicle || null,
-            rateCustomizationId: tripData.rateCustomizationid,
+            rateCustomizationId: tripData.rateCustomizationId,
             rateCategoryId: tripData.rateCategoryId,
         };
     };
@@ -105,7 +105,7 @@ export const TripProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             endedAt: new Date(),
             miles: tripData.miles!,
             geometry: null,
-            rateCustomizationId: tripData.rateCustomizationid,
+            rateCustomizationId: tripData.rateCustomizationId,
             rateCategoryId: tripData.rateCategoryId,
             expenses: []
         };
@@ -115,7 +115,7 @@ export const TripProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const isTripDataComplete = (): boolean => {
         return !!(
             // tripData?.startAddress &&
-            tripData?.rateCustomizationid &&
+            tripData?.rateCustomizationId &&
             tripData?.rateCategoryId
         );
     };
@@ -126,24 +126,26 @@ export const TripProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             tripData?.startAddress &&
             tripData?.endAddress &&
             tripData?.miles &&
-            tripData?.rateCustomizationid &&
+            tripData?.rateCustomizationId &&
             tripData?.rateCategoryId
         );
+    };
+
+    const contextValue: TripContextType = {
+        tripData,
+        setTripData: setTripDataHandler,
+        clearTripData,
+        updateTripField,
+        getCreateTripPayload,
+        getCreateManualTripPayload,
+        isTripDataComplete,
+        isManualTripDataComplete,
     };
 
     return (
 
         // put everything into the provider. Becomes a real storage box for our app
-        <TripContext.Provider value={{
-            tripData,
-            setTripData: setTripDataHandler,
-            clearTripData,
-            updateTripField,
-            getCreateTripPayload,
-            getCreateManualTripPayload,
-            isTripDataComplete,
-            isManualTripDataComplete,
-        }}>
+        <TripContext.Provider value={contextValue}>
             {children}
         </TripContext.Provider>
     );

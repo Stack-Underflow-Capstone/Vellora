@@ -48,7 +48,7 @@ const Tracking = () => {
 
     // update trip data in the context
     if (selectedRateId) {
-      updateTripField('rateCustomizationid', selectedRateId);
+      updateTripField('rateCustomizationId', selectedRateId);
     }
   };
 
@@ -112,7 +112,7 @@ const Tracking = () => {
         startAddress: '',
         purpose: notes,
         vechicle: vehicle,
-        rateCustomizationid: rate,
+        rateCustomizationId: rate,
         rateCategoryId: type,
         parkingCost: parseFloat(parking) || 0,
         gasCost: parseFloat(gas) || 0,
@@ -120,27 +120,6 @@ const Tracking = () => {
     }
 
   }, [vehicle, type, rate, notes, parking, gas]);
-
-  // show loading state
-  if (loading) {
-    return (
-        <Text className="text-3xl text-primaryPurple font-bold p-6">Loading rates...</Text>
-      );
-  }
-
-  // Show error state
-  if (error) {
-    return (
-      <>
-        <Text className="text-3xl text-primaryPurple font-bold p-6">Error loading rates</Text>
-        <Text className="text-red-500 p-6">{error}</Text>
-        <Button 
-          title="Retry" 
-          onPress={() => window.location.reload()} 
-        />
-      </>
-    );
-  }
 
   // start trip event handler
   const handleStartTrip = async () => {
@@ -163,7 +142,7 @@ const Tracking = () => {
       startAddress: currentLocation,
       purpose: notes,
       vechicle: vehicle,
-      rateCustomizationid: rate,
+      rateCustomizationId: rate,
       rateCategoryId: type,
       parkingCost: parseFloat(parking) || 0,
       gasCost: parseFloat(gas) || 0,
