@@ -4,6 +4,7 @@ from app.modules.trips.exceptions import InvalidTripDataError, TripAlreadyActive
 from app.modules.expenses.exceptions import ExpenseNotFoundError, ExpensePersistenceError, InvalidExpenseDataError, DuplicateExpenseError
 from app.modules.rate_customizations.exceptions import InvalidRateCustomizationDataError, RateCustomizationNotFoundError, RateCustomizationPersistenceError, DuplicateRateCustomizationError
 from app.modules.rate_categories.exceptions import InvalidRateCategoryDataError, RateCategoryNotFoundError, RateCategoryPersistenceError, DuplicateRateCategoryError
+from app.modules.common_places.exceptions import InvalidCommonPlaceDataError, CommonPlaceNotFoundError, CommonPlacePersistenceError, DuplicateCommonPlaceError, MaxCommonPlacesError
 from app.modules.reports.exceptions import (
     InvalidReportDataError, ReportNotFoundError, ReportPersistenceError, 
     ReportPermissionError, ReportRateLimitError, ReportSystemLimitError,
@@ -62,6 +63,18 @@ def error_handler(func):
         except RateCategoryPersistenceError as e:
             raise HTTPException(status_code=500, detail=str(e))
         except RateCategoryNotFoundError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+
+        #common_places
+        except InvalidCommonPlaceDataError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except MaxCommonPlacesError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except DuplicateCommonPlaceError as e:
+            raise HTTPException(status_code=409, detail=str(e))
+        except CommonPlacePersistenceError as e:
+            raise HTTPException(status_code=500, detail=str(e))
+        except CommonPlaceNotFoundError as e:
             raise HTTPException(status_code=404, detail=str(e))
         
         #reports

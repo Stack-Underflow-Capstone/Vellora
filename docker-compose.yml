@@ -15,7 +15,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - "./init-resources.sh:/etc/localstack/init/ready.d/init-resources.sh"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:4566/_localstack/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -63,6 +63,7 @@ services:
       - LOCALSTACK_ENDPOINT=${LOCALSTACK_ENDPOINT}
       - REPORTS_BUCKET=${REPORTS_BUCKET}
       - REPORTS_QUEUE=${REPORTS_QUEUE}
+    entrypoint: /app/wait-for-postgres.sh
 
   worker:
     networks:
@@ -98,7 +99,6 @@ services:
       - LOCALSTACK_ENDPOINT=${LOCALSTACK_ENDPOINT}
       - REPORTS_BUCKET=${REPORTS_BUCKET}
       - REPORTS_QUEUE=${REPORTS_QUEUE}
-
   frontend:
     networks:
       - vellora_network
@@ -113,12 +113,13 @@ services:
       - "19002:19002"
     depends_on:
       - backend
-    command: ["npx", "expo", "start", "--tunnel"]
+    command: [ "npx", "expo", "start", "--tunnel" ]
     stdin_open: true
     tty: true
 
 volumes:
   postgres_data:
+
 
 networks:
   vellora_network:

@@ -163,4 +163,5 @@ jobs:
             -p 80:8000 \
             -e ENV=Production \
             260125007066.dkr.ecr.us-east-2.amazonaws.com/vellora/backend:latest
+            docker exec -it vellora-backend alembic upgrade head
 
