@@ -12,6 +12,7 @@ import GeometryMap from './components/GeometryMap';
 import { useTripData } from './contexts/TripDataContext';
 import { useRateOptions } from './hooks/useRateOptions';
 import { endTrip, TripStatus } from './services/Trips';
+import { useCommonPlaces } from './hooks/useCommonPlaces';
 
 const MAPBOX_KEY = process.env.EXPO_PUBLIC_API_KEY_MAPBOX_PUBLIC_ACCESS_TOKEN;
 
@@ -21,6 +22,8 @@ const TrackingFinished = () => {
 
     // use rate options hook for dynamic rates
     const { rateItems, categoryItems, loading, error, updateSelectedRate } = useRateOptions();
+
+    const { places: commonPlaces } = useCommonPlaces();
 
     // state variables
     const [notes, setNotes] = useState(tripData.notes);
@@ -41,6 +44,7 @@ const TrackingFinished = () => {
     // get trip data from navigation params
     const params = useLocalSearchParams();
     const routeDistance = params.distance as string;
+    const routeDistanceMeters = params.distance_meters as string;
     const routeGeometry = params.geometry as string;
     const tripId = params.id as string;
 
@@ -102,10 +106,16 @@ const TrackingFinished = () => {
                     let distanceValue = parseFloat(tripDistance);
                     const calculatedValue = (rateValue * distanceValue).toFixed(2);
                     setTripValue(calculatedValue);
+
+                    console.log('Rate:', rate);
+                    console.log('Type:', type);
+                    console.log('Trip Distance:', tripDistance);
+                    console.log('Calculated Value:', calculatedValue);
     
                 }
             }
         }
+        
     }, [rate, type, tripDistance, rateItems, categoryItems]);
 
     // convert coordinates to address using mapbox
@@ -227,12 +237,25 @@ const TrackingFinished = () => {
 
         
         const finalTripData = {
-            ...tripData,
-            distance_meters: parseFloat(tripDistance),
-            mileage_reimbursement_total: tripValue,
-            expense_reimsement_total: parseFloat(expenseValue),
+            notes: notes,
+            vehicle: vehicle,
+
+            rate_customization_id: rate || undefined,
+            rate_category_id: type || undefined,
+
+            parking: parking,
+            gas: gas,
+            tolls: tolls,
+
+            miles: parseFloat(tripDistance),
+            distance_meters: parseFloat(routeDistanceMeters),
+
+            mileage_reimbursement_total: parseFloat(tripValue),
+            expense_reimbursement_total: parseFloat(expenseValue),
+
             start_address: startAddress,
             end_address: endAddress,
+
             geometry: tripGeometry,                            
             end_at: new Date().toISOString(),
             status: TripStatus.completed
@@ -288,6 +311,7 @@ const TrackingFinished = () => {
                         title='Save trip'
                         onPress={handleSaveTrip}
                         style={{top: 10}}
+                        className='py-4 px-5'
                     />
                 </>
             }
@@ -301,6 +325,9 @@ const TrackingFinished = () => {
             <Text className='text-xl text-black p-6'>Make sure to update trip details:</Text>
 
             <TripDetailsForm 
+
+                // mapbox token
+                mapboxAccessToken={MAPBOX_KEY || ""}
 
                 // state variables
                 notes={notes} setNotes={setNotes}
@@ -317,6 +344,13 @@ const TrackingFinished = () => {
                 vehicleItems={vehicleItems}
                 typeItems={categoryItems}
                 rateItems={rateItems}
+
+                // common places
+                commonPlaces={commonPlaces.map(p => ({
+                    id: p.id,
+                    title: p.name,
+                    address: p.address
+                }))}
                 
             />
 

@@ -25,7 +25,7 @@ export type Trip = {
     reimbursement_rate?: number | null;
     miles?: number | null;
     geometry?: object | null;
-    milage_reimbursement_total?: number | null;
+    mileage_reimbursement_total?: number | null;
     expense_reimbursement_total?: number | null;
     start_at: Date;
     ended_at?: Date | undefined;
@@ -55,6 +55,17 @@ export type createManualTripPayload = {
     rate_customization_id: string;
     rate_category_id: string;
     expenses?: Expense[];
+    purpose?: string | null;
+    vehicle?: string | null;
+    parking?: number | null;
+    gas?: number | null;
+    tolls?: number | null;
+}
+
+
+export type createExpensePayload = {
+    type: string;
+    amount: number;
 }
 
 
@@ -187,3 +198,62 @@ export async function cancelTrip(trip_id: string, token?: string): Promise<Trip>
     return handleResponse<Trip>(response);
 }
 
+
+export async function createTripExpense(tripId: string, payload: createExpensePayload, token?: string): Promise<Expense> {
+    const authToken = token || await checkToken();
+
+    const response = await fetch(`${API_BASE_URL}/trips/${tripId}/expenses/`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify(payload)
+    })
+
+    return handleResponse<Expense>(response);
+}
+
+export async function getTripExpenses(tripId: string, token?: string): Promise<Expense[]> {
+    const authToken = token || await checkToken();
+
+    const response = await fetch(`${API_BASE_URL}/trips/${tripId}/expenses`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`
+        }
+    });
+
+    return handleResponse<Expense[]>(response);
+}
+
+
+export async function updateTripExpense(expenseId: string, tripId: string, payload: Partial<Expense>, token?: string): Promise<Expense> {
+    const authToken = token || await checkToken();
+
+    const response = await fetch(`${API_BASE_URL}/trips/${tripId}/expenses/${expenseId}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify(payload)
+    });
+
+    return handleResponse<Expense>(response);
+}
+
+export async function deleteTripExpense(expenseId: string, tripId: string, token?: string): Promise<Expense> {
+    const authToken = token || await checkToken();
+
+    const response = await fetch(`${API_BASE_URL}/trips/${tripId}/expenses/${expenseId}`, {
+        method: "DELETE",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`
+        }
+    })
+
+    return handleResponse<Expense>(response);
+}
