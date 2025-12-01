@@ -18,10 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . /app/
 
-# Make wait script executable
-RUN chmod +x wait-for-postgres.sh
-
 EXPOSE 8000
 
 # Use the wait script
-CMD ["./wait-for-postgres.sh"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

@@ -23,7 +23,7 @@ const Button: React.FC<ButtonProps> = ({
         <TouchableOpacity
             onPress={onPress}
             disabled={toggleDisabled}
-            className={`bg-accentGreen py-4 px-5 rounded-xl items-center disabled:opacity-50 ${className}`}
+            className={`bg-accentGreen rounded-xl items-center disabled:opacity-50 ${className}`}
             {...props}
         >
             {isLoading ? (

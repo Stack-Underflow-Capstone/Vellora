@@ -6,6 +6,7 @@ import { FontAwesome } from '@expo/vector-icons';
 import NoteInput from './NoteInput';
 import Dropdown from './Dropdown';
 import CurrencyInput from './CurrencyInput';
+import AddressInput from './AddressInput';
 
 // typescript type for expected props
 type TripDtailsFormProps = {
@@ -37,10 +38,12 @@ type TripDtailsFormProps = {
     // optional start address
     startAddress?: string;
     setStartAddress?: (value: string) => void;
+    onStartAddressSelect?: (address: any) => void;      // callback for full address obj
 
     // optional end address
     endAddress?: string;
     setEndAddress?: (value: string) => void;
+    onEndAddressSelect?: (address: any) => void;        // callback for full address obj
 
     // optional tolls
     tolls?: string;
@@ -51,6 +54,12 @@ type TripDtailsFormProps = {
     typeItems: any[];
     rateItems: any[];
 
+    // common places
+    commonPlaces?: any[];
+
+    // mapbox props
+    mapboxAccessToken?: string;
+
     
 };
 
@@ -59,25 +68,36 @@ type TripDtailsFormProps = {
 const TripDetailsForm: React.FC<TripDtailsFormProps> = (props) => {
 
     // common icon properties
-    const iconProps = { size: 18 };
+    const iconProps = { size: 18, color: '#6B7280' };
 
     return (
         <View style={{ padding: 25, gap: 16 }}>
 
             {/* Conditionally render start and end addresses (only if those props are provided) */}
             {props.startAddress !== undefined && props.setStartAddress && (
-                <NoteInput 
+                <AddressInput 
+
+                    label="Start Location"
+                    placeholder="Select Start Location..."
                     value={props.startAddress}
                     onChangeText={props.setStartAddress}
-                    placeholder='Select Start Location...'
+                    onAddressSelect={props.onStartAddressSelect || (() => {})}      // pass the selection callback if provided (if not do nothing)
+                    mapboxAccessToken={props.mapboxAccessToken || ""}
+                    icon={<FontAwesome name="map-marker" {...iconProps} />}
+                    commonPlaces={props.commonPlaces}
                 />
             )}
             {props.endAddress !== undefined && props.setEndAddress && (
-                <NoteInput 
+                <AddressInput 
+
+                    label="End Location"
+                    placeholder="Select End Location..."
                     value={props.endAddress}
                     onChangeText={props.setEndAddress}
-                    placeholder='Select End Location...'
-
+                    onAddressSelect={props.onStartAddressSelect || (() => {})}      // pass the selection callback if provided (if not do nothing)
+                    mapboxAccessToken={props.mapboxAccessToken || ""}
+                    icon={<FontAwesome name="map-marker" {...iconProps} />}
+                    commonPlaces={props.commonPlaces}
                 />
             )}
 
@@ -137,6 +157,15 @@ const TripDetailsForm: React.FC<TripDtailsFormProps> = (props) => {
                 icon={<FontAwesome name="car" {...iconProps} />}
             />
 
+            {/* render rate dropdown */}
+            <Dropdown 
+                placeholder="Select reimbursement rate"
+                items={props.rateItems}
+                onValueChange={props.setRate}
+                value={props.rate}
+                icon={<FontAwesome name="dollar" {...iconProps} />}
+            />
+
             {/* render type dropdown */}
             <Dropdown 
                 placeholder="Select type"
@@ -146,14 +175,6 @@ const TripDetailsForm: React.FC<TripDtailsFormProps> = (props) => {
                 icon={<FontAwesome name="list-ul" {...iconProps} />}
             />
 
-            {/* render rate dropdown */}
-            <Dropdown 
-                placeholder="Select reimbursement rate"
-                items={props.rateItems}
-                onValueChange={props.setRate}
-                value={props.rate}
-                icon={<FontAwesome name="dollar" {...iconProps} />}
-            />
         
         </View>
     )

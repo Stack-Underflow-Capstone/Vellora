@@ -105,7 +105,7 @@ export default function GenerateReportPage() {
 					<Button
 						title={loading ? "Generating..." : "Generate Report"}
 						onPress={handleGenerate}
-						className="mt-3"
+						className="mt-3 py-4 px-5"
 						disabled={loading}
 					/>
 				</View>

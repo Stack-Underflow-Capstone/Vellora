@@ -63,6 +63,7 @@ const TrackingInAction = () => {
                 pathname: '/trackingFinished',
                 params: {
                     distance: miles,
+                    distance_meters: tripData.distance.toString(),
                     geometry: JSON.stringify(tripData.geometry)
                 }
             });
@@ -72,6 +73,7 @@ const TrackingInAction = () => {
                 pathname: '/trackingFinished',
                 params: {
                     distance: '0',
+                    distance_meters: '0',
                     geometry: null
                 }
             });
@@ -86,7 +88,7 @@ const TrackingInAction = () => {
                 <Button 
                     title='End Trip'
                     onPress={handleEndTrip}     // end the trip when footer button is pressed
-                    className=''                // for additional styling
+                    className='py-4 px-5'                // for additional styling
                 />
             }
         >

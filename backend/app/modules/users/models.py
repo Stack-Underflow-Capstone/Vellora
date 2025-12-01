@@ -56,6 +56,7 @@ class User(Base):
     trips = relationship("Trip", back_populates="user", cascade="all, delete-orphan")
     expenses = relationship("Expense", back_populates="user", cascade="all, delete-orphan") 
     rate_customizations = relationship("RateCustomization", back_populates="user", cascade="all, delete-orphan")
+    common_places = relationship("CommonPlace", back_populates="user", cascade="all, delete-orphan")
     reports= relationship("Report", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:

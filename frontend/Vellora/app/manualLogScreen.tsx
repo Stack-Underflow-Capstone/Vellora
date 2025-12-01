@@ -13,9 +13,11 @@ import Button from './components/Button';
 import EditableNumericDisplay from './components/EditableNumericDisplay';
 import { useRateOptions } from './hooks/useRateOptions';
 import { useTripData } from './contexts/TripDataContext';
+import { useCommonPlaces } from './hooks/useCommonPlaces';
 
 //  import service
-import { createManualTrip, createManualTripPayload } from './services/Trips';
+import { createExpensePayload, createManualTrip, createManualTripPayload } from './services/Trips';
+import { createTripExpense, Expense } from './services/Trips';
 
 const ManualLogScreen = () => {
 
@@ -24,6 +26,9 @@ const ManualLogScreen = () => {
 
     // use rate options hook for dynamic rates
     const { rateItems, categoryItems, loading, error, updateSelectedRate } = useRateOptions();
+
+    // use common places hook to get all the common places
+    const { places: commonPlaces } = useCommonPlaces();
 
     // state variables
     const [startDate, setStartDate] = useState(new Date());
@@ -137,6 +142,29 @@ const ManualLogScreen = () => {
                 return;
             }
 
+            // create the expenses array for storage and filter by amounts that aren't empty (0)
+            const expensesInput: createExpensePayload[] = [
+                { type: 'parking', amount: parseFloat(parking) || 0 },
+                { type: 'gas', amount: parseFloat(gas) || 0 },
+                { type: 'tolls', amount: parseFloat(tolls) || 0 }
+            ].filter(e => e.amount > 0)
+            .map(e => ({ ...e, amount: Number(e.amount.toFixed(2)) }));     // map the objects for payloads later
+
+            // update the context data BEFORE making an API call to ensure the context is up to date
+            updateTripData({
+                notes,
+                vehicle,
+                type,
+                rate,
+                parking: parking.toString(),
+                gas: gas.toString(),
+                tolls: tolls.toString(),
+                startAddress,
+                endAddress,
+                distance: tripDistance,
+                value: tripValue
+            })
+         
             // typed shape  createManualTrip expects
             const manualTripPayload: createManualTripPayload = {
                 start_address: startAddress?.trim() || "Unknown start location",
@@ -147,7 +175,12 @@ const ManualLogScreen = () => {
                 geometry: null,
                 rate_customization_id: rate, // these should be UUID strings
                 rate_category_id: type,
-                expenses: [], 
+                expenses: [],               // CHANGE THE EXPENSES TO CALCULATE THE SUM OF ALL EXPENSES LIKE PARKING, GAS, TOLLS. THIS EMPTY ARRAY IS HERE TEMPORARILY
+                purpose: notes?.trim() || null,
+                parking: parseFloat(parking) || 0,
+                gas: parseFloat(gas) || 0,
+                tolls: parseFloat(tolls) || 0,
+                vehicle: vehicle || null,
             };
 
             console.log("Creating manual trip with frontend payload:", manualTripPayload);
@@ -155,6 +188,28 @@ const ManualLogScreen = () => {
             // call the service which will map the backend format
             const newTrip = await createManualTrip(manualTripPayload);
             console.log("Manual trip created successfully:", newTrip);
+
+            // Create all the new expenses of the new trip
+            let newExpenses: Expense[] = [];
+
+            if(expensesInput.length) {      // check if the array is > 0
+                const results = await Promise.allSettled(
+                    expensesInput.map((payload) => createTripExpense(newTrip.id, payload))  // create an expense for the new trip
+                );
+
+                // Ensure promises are fuffiled when creating new trip expenses, 
+                newExpenses = results
+                .filter((r): r is PromiseFulfilledResult<Expense> => r.status === 'fulfilled')
+                .map((r) => r.value);
+
+                const failures = results.filter(r => r.status === 'rejected');
+                if (failures.length) console.warn(`Failure to create ${failures.length} expense(s).`)
+            }
+            
+            if (newExpenses.length) {
+                // 'expenses' is not declared on TripData; cast to any to update context with the new expenses
+                updateTripData({ expenses: newExpenses } as any)
+            }
 
             // navigate away
             router.push("/(tabs)/history");
@@ -194,6 +249,7 @@ const ManualLogScreen = () => {
                         title='Save trip'
                         onPress={handleAddTrip}
                         style={{top: 10}}
+                        className='py-4 px-5'
                     />
                 </>
             }
@@ -273,6 +329,13 @@ const ManualLogScreen = () => {
                     vehicleItems={vehicleItems}
                     typeItems={categoryItems}
                     rateItems={rateItems}
+
+                    // common places
+                    commonPlaces={commonPlaces.map(p => ({
+                        id: p.id,
+                        title: p.name,
+                        address: p.address
+                    }))}
                     
                 />
 
