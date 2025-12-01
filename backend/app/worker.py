@@ -1,6 +1,15 @@
 import asyncio
 import json
 
+from app.modules.auth.models import RefreshToken, OAuthAccount
+from app.modules.common_places.models import CommonPlace
+from app.modules.expenses.models import Expense
+from app.modules.rate_categories.models import RateCategory
+from app.modules.rate_customizations.models import RateCustomization
+from app.modules.reports.models import Report, ReportStatus
+from app.modules.trips.models import Trip
+from app.modules.users.models import User
+
 from app.aws_client import get_sqs_client
 from app.config import settings
 from app.infra.db import AsyncSessionLocal
@@ -10,14 +19,6 @@ from app.modules.reports.service import ReportsService
 from app.infra.adapters.email_notification_adapter import EmailNotificationAdapter
 from app.infra.adapters.s3_report_storage_adapter import S3ReportStorageAdapter
 from app.infra.adapters.sqs_report_queue_adapter import SQSReportQueueAdapter
-
-from app.modules.reports.models import Report, ReportStatus
-from app.modules.trips.models import Trip
-from app.modules.expenses.models import Expense
-from app.modules.users.models import User
-from app.modules.rate_categories.models import RateCategory
-from app.modules.rate_customizations.models import RateCustomization
-from app.modules.auth.models import RefreshToken
 
 VISIBILITY_TIMEOUT = 60 
 MAX_RECEIVE_COUNT = 3 
@@ -121,7 +122,6 @@ class ReportWorker:
                 await session.commit()
                 
                 try:
-                    from app.modules.users.models import User
                     user = await session.get(User, report.user_id)
                     if user:
                         notification_service = EmailNotificationAdapter()
@@ -131,11 +131,13 @@ class ReportWorker:
                         )
                 except Exception as email_error:
                     print(f"Failed to send failure notification for report {report_id}: {email_error}")
+                    # Email failure should not prevent marking report as failed
                 
                 return True
             return False
         except Exception as e:
             print(f"Error marking report {report_id} as failed: {e}")
+            return False
             return False
 
     async def cleanup_stuck_reports_on_startup(self):
