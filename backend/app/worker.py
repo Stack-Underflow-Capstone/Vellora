@@ -11,13 +11,14 @@ from app.infra.adapters.email_notification_adapter import EmailNotificationAdapt
 from app.infra.adapters.s3_report_storage_adapter import S3ReportStorageAdapter
 from app.infra.adapters.sqs_report_queue_adapter import SQSReportQueueAdapter
 
-from app.modules.reports.models import Report, ReportStatus
-from app.modules.trips.models import Trip
+from app.modules.auth.models import RefreshToken, OAuthAccount
+from app.modules.common_places.models import CommonPlace
 from app.modules.expenses.models import Expense
-from app.modules.users.models import User
 from app.modules.rate_categories.models import RateCategory
 from app.modules.rate_customizations.models import RateCustomization
-from app.modules.auth.models import RefreshToken
+from app.modules.reports.models import Report, ReportStatus
+from app.modules.trips.models import Trip
+from app.modules.users.models import User
 
 VISIBILITY_TIMEOUT = 60 
 MAX_RECEIVE_COUNT = 3 
