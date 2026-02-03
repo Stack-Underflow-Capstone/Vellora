@@ -1,6 +1,5 @@
 import { API_BASE_URL } from "../constants/api";
 import { ApiError, handleResponse, checkToken } from "./helpers";
-import { fetch } from 'expo/fetch';
 
 
 export type Expense = {
