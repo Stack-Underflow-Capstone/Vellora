@@ -36,7 +36,6 @@ const _layout = () => {
 				options={{
 					title: "History",
 					headerShown: false,
-					href: null,
 					tabBarIcon: ({ focused }) => (
 						<TabIcon
 							icon="history"

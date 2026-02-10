@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, Platform } from "react-native";
 
 const BLUE = "#3F46D6";
 
@@ -10,7 +10,15 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 24,
-    justifyContent: "center", 
+    justifyContent: "center",
+    ...Platform.select({
+      web: {
+        maxWidth: 400,
+        width: "100%",
+        alignSelf: "center",
+      },
+      default: {},
+    }),
   },
   logoRow: {
     width: "100%",
