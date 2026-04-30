@@ -50,8 +50,16 @@ jobs:
         working-directory: backend
         run: |
           echo "Running backend tests..."
-          pytest --cov=app.modules --cov-report=term-missing
+          pytest --cov=app.modules --cov-report=term-missing --cov-report=html:coverage-report
           echo "Backend tests completed."
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: backend/coverage-report/
+          retention-days: 30
 
   # Job 3: Run frontend deployment if frontend files changed
   frontend_basic_checks:
@@ -81,6 +89,17 @@ jobs:
       - name: Check TypeScript types
         working-directory: frontend/Vellora
         run: npx tsc --noEmit
+
+      - name: Build Frontend (Web Export)
+        working-directory: frontend/Vellora
+        run: npx expo export --platform web
+
+      - name: Upload Frontend Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/Vellora/dist/
+          retention-days: 30
 
   regression_tests:
     name: Regression Tests
@@ -144,6 +163,23 @@ jobs:
           docker tag vellora/backend:latest 260125007066.dkr.ecr.us-east-2.amazonaws.com/vellora/backend:latest
           docker push 260125007066.dkr.ecr.us-east-2.amazonaws.com/vellora/backend:latest
 
+      - name: Generate Backend Build Info
+        run: |
+          mkdir -p build-info
+          echo "Build Timestamp: $(date -u)" > build-info/build-info.txt
+          echo "Commit SHA: ${{ github.sha }}" >> build-info/build-info.txt
+          echo "Branch: ${{ github.ref_name }}" >> build-info/build-info.txt
+          echo "Run ID: ${{ github.run_id }}" >> build-info/build-info.txt
+          echo "Image: 260125007066.dkr.ecr.us-east-2.amazonaws.com/vellora/backend:latest" >> build-info/build-info.txt
+          docker image inspect vellora/backend:latest > build-info/image-inspect.json
+
+      - name: Upload Backend Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build
+          path: build-info/
+          retention-days: 30
+
       - name: Delete old images from ECR
         run: |
           aws ecr list-images --repository-name vellora/backend \
@@ -169,9 +205,12 @@ jobs:
             -e OAUTH_PROVIDERS__GOOGLE__CLIENT_ID=$OAUTH_PROVIDERS__GOOGLE__CLIENT_ID \
             -e OAUTH_PROVIDERS__GOOGLE__CLIENT_SECRET=$OAUTH_PROVIDERS__GOOGLE__CLIENT_SECRET \
             -e OAUTH_PROVIDERS__GOOGLE__REDIRECT_URI=$OAUTH_PROVIDERS__GOOGLE__REDIRECT_URI \
+            -e OAUTH_PROVIDERS__GOOGLE__SCOPES='["openid", "email", "profile"]' \
             -e OAUTH_STATE_TTL_SECONDS=$OAUTH_STATE_TTL_SECONDS \
             -e USE_LOCALSTACK=$USE_LOCALSTACK \
             -e AWS_REGION=$AWS_REGION \
+            -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+            -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
             -e REPORTS_BUCKET=$REPORTS_BUCKET \
             -e REPORTS_QUEUE=$REPORTS_QUEUE \
             -e EMAIL_SENDER=$EMAIL_SENDER \
@@ -179,8 +218,11 @@ jobs:
             -e EMAIL_PROVIDER=$EMAIL_PROVIDER \
             -e RESEND_API_KEY=$RESEND_API_KEY \
             -e BACKEND_URL=$BACKEND_URL \
+            -e AWS_S3_BUCKET=$AWS_S3_BUCKET \
+            -e AI_AGENT_ENABLED=$AI_AGENT_ENABLED \
+            -e OPENAI_API_KEY=$OPENAI_API_KEY \
             --restart=always \
-            -p 80:8000 \
+            -p 8000:8000 \
             -e ENV=Testing \
             260125007066.dkr.ecr.us-east-2.amazonaws.com/vellora/backend:latest
             docker exec vellora-backend alembic upgrade head
@@ -191,6 +233,8 @@ jobs:
             -e JWT_SECRET_KEY=$JWT_SECRET_KEY \
             -e USE_LOCALSTACK=false \
             -e AWS_REGION=$AWS_REGION \
+            -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+            -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
             -e REPORTS_BUCKET=$REPORTS_BUCKET \
             -e REPORTS_QUEUE=$REPORTS_QUEUE \
             -e EMAIL_SENDER=$EMAIL_SENDER \
@@ -198,6 +242,9 @@ jobs:
             -e EMAIL_PROVIDER=$EMAIL_PROVIDER \
             -e RESEND_API_KEY=$RESEND_API_KEY \
             -e BACKEND_URL=$BACKEND_URL \
+            -e AWS_S3_BUCKET=$AWS_S3_BUCKET \
+            -e AI_AGENT_ENABLED=$AI_AGENT_ENABLED \
+            -e OPENAI_API_KEY=$OPENAI_API_KEY \
             --restart=always \
             260125007066.dkr.ecr.us-east-2.amazonaws.com/vellora/backend:latest \
             python -m app.worker

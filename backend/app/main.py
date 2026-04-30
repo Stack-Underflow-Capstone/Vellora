@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import router as api_v1_router
 import os
@@ -19,3 +20,6 @@ app.add_middleware(
 
 app.include_router(api_v1_router)
 
+# Add this middleware. 'trusted_hosts="*"' is usually safe on EC2
+# as long as your security group only allows traffic from your load balancer/Caddy.
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
