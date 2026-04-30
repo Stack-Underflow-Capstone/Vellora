@@ -1,0 +1,250 @@
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [dev, qa, main]
+
+jobs:
+  # Job 1: Filter changed files and set outputs for backend and frontend changes
+  paths:
+    name: Determine Changed Paths
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Filter changed paths
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+
+  # Job 2: Run backend tests/deployment if backend files changed
+  backend_basic_checks:
+    name: Backend Basic Checks
+    needs: paths
+    if: ${{ (github.base_ref == 'dev' || github.base_ref == 'main') && needs.paths.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # Set up Python and install dependencies
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-test.txt ]; then pip install -r requirements-test.txt; fi
+
+      - name: Run Backend Tests
+        working-directory: backend
+        run: |
+          echo "Running backend tests..."
+          pytest --cov=app.modules --cov-report=term-missing --cov-report=html:coverage-report
+          echo "Backend tests completed."
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: backend/coverage-report/
+          retention-days: 30
+
+  # Job 3: Run frontend deployment if frontend files changed
+  frontend_basic_checks:
+    name: Frontend Basic Checks
+    needs: paths
+    if: ${{ (github.base_ref == 'dev' || github.base_ref == 'main') && needs.paths.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: frontend/Vellora/package-lock.json
+
+      # Add any frontend build/test steps if needed.
+      - name: Install Frontend Dependencies
+        working-directory: frontend/Vellora
+        run: |
+          npm ci
+
+      - name: Run ESLint
+        working-directory: frontend/Vellora
+        run: npm run lint
+
+      - name: Check TypeScript types
+        working-directory: frontend/Vellora
+        run: npx tsc --noEmit
+
+      - name: Build Frontend (Web Export)
+        working-directory: frontend/Vellora
+        run: npx expo export --platform web
+
+      - name: Upload Frontend Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/Vellora/dist/
+          retention-days: 30
+
+  regression_tests:
+    name: Regression Tests
+    if: github.base_ref == 'qa' || github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Regression Tests
+        run: |
+          echo "Running regression tests..."
+          # Add your regression test commands here when you have them
+          echo "QA tests done, merging..."
+
+  main_branch_check:
+    name: Main Branch Merge Protection
+    if: github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify QA Branch
+        run: |
+          if [[ "${{ github.head_ref }}" != "qa" ]]; then
+            echo "Error: Can only merge to main from qa branch"
+            exit 1
+          fi
+
+  deploy_production:
+    name: Deploy to Production
+    needs:
+      [
+        backend_basic_checks,
+        frontend_basic_checks,
+        regression_tests,
+        main_branch_check,
+      ]
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read # This is required for actions/checkout
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::260125007066:role/GitHubActions # Update with correct ARN
+          aws-region: us-east-2
+          role-session-name: gha-${{ github.run_id }}
+      - name: Sts GetCallerIdentity
+        run: |
+          aws sts get-caller-identity
+
+      - name: AWS ECR Login
+        run: |
+          aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 260125007066.dkr.ecr.us-east-2.amazonaws.com
+
+      - name: Build, Tag, and Push Docker Image
+        working-directory: backend
+        run: |
+          docker build -t vellora/backend .
+          docker tag vellora/backend:latest 260125007066.dkr.ecr.us-east-2.amazonaws.com/vellora/backend:latest
+          docker push 260125007066.dkr.ecr.us-east-2.amazonaws.com/vellora/backend:latest
+
+      - name: Generate Backend Build Info
+        run: |
+          mkdir -p build-info
+          echo "Build Timestamp: $(date -u)" > build-info/build-info.txt
+          echo "Commit SHA: ${{ github.sha }}" >> build-info/build-info.txt
+          echo "Branch: ${{ github.ref_name }}" >> build-info/build-info.txt
+          echo "Run ID: ${{ github.run_id }}" >> build-info/build-info.txt
+          echo "Image: 260125007066.dkr.ecr.us-east-2.amazonaws.com/vellora/backend:latest" >> build-info/build-info.txt
+          docker image inspect vellora/backend:latest > build-info/image-inspect.json
+
+      - name: Upload Backend Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build
+          path: build-info/
+          retention-days: 30
+
+      - name: Delete old images from ECR
+        run: |
+          aws ecr list-images --repository-name vellora/backend \
+            --query "imageIds[?imageTag!='latest'].imageDigest" --output text |
+          tr -s '[:space:]' '\n' |
+          xargs -r -t -I{} aws ecr batch-delete-image --repository-name vellora/backend --image-ids imageDigest={}
+
+      - name: Deploy to EC2 with SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: 22
+          script: |
+            aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 260125007066.dkr.ecr.us-east-2.amazonaws.com
+            docker pull 260125007066.dkr.ecr.us-east-2.amazonaws.com/vellora/backend:latest
+            docker rm -f vellora-backend || true
+            docker run -d --name vellora-backend \
+            -e DATABASE_URL=$DATABASE_URL \
+            -e FERNET_KEY=$FERNET_KEY \
+            -e JWT_SECRET_KEY=$JWT_SECRET_KEY \
+            -e OAUTH_PROVIDERS__GOOGLE__CLIENT_ID=$OAUTH_PROVIDERS__GOOGLE__CLIENT_ID \
+            -e OAUTH_PROVIDERS__GOOGLE__CLIENT_SECRET=$OAUTH_PROVIDERS__GOOGLE__CLIENT_SECRET \
+            -e OAUTH_PROVIDERS__GOOGLE__REDIRECT_URI=$OAUTH_PROVIDERS__GOOGLE__REDIRECT_URI \
+            -e OAUTH_PROVIDERS__GOOGLE__SCOPES='["openid", "email", "profile"]' \
+            -e OAUTH_STATE_TTL_SECONDS=$OAUTH_STATE_TTL_SECONDS \
+            -e USE_LOCALSTACK=$USE_LOCALSTACK \
+            -e AWS_REGION=$AWS_REGION \
+            -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+            -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+            -e REPORTS_BUCKET=$REPORTS_BUCKET \
+            -e REPORTS_QUEUE=$REPORTS_QUEUE \
+            -e EMAIL_SENDER=$EMAIL_SENDER \
+            -e EMAIL_ENABLED=$EMAIL_ENABLED \
+            -e EMAIL_PROVIDER=$EMAIL_PROVIDER \
+            -e RESEND_API_KEY=$RESEND_API_KEY \
+            -e BACKEND_URL=$BACKEND_URL \
+            -e AWS_S3_BUCKET=$AWS_S3_BUCKET \
+            -e AI_AGENT_ENABLED=$AI_AGENT_ENABLED \
+            -e OPENAI_API_KEY=$OPENAI_API_KEY \
+            --restart=always \
+            -p 8000:8000 \
+            -e ENV=Testing \
+            260125007066.dkr.ecr.us-east-2.amazonaws.com/vellora/backend:latest
+            docker exec vellora-backend alembic upgrade head
+            docker rm -f vellora-worker || true
+            docker run -d --name vellora-worker \
+            -e DATABASE_URL=$DATABASE_URL \
+            -e FERNET_KEY=$FERNET_KEY \
+            -e JWT_SECRET_KEY=$JWT_SECRET_KEY \
+            -e USE_LOCALSTACK=false \
+            -e AWS_REGION=$AWS_REGION \
+            -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+            -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+            -e REPORTS_BUCKET=$REPORTS_BUCKET \
+            -e REPORTS_QUEUE=$REPORTS_QUEUE \
+            -e EMAIL_SENDER=$EMAIL_SENDER \
+            -e EMAIL_ENABLED=$EMAIL_ENABLED \
+            -e EMAIL_PROVIDER=$EMAIL_PROVIDER \
+            -e RESEND_API_KEY=$RESEND_API_KEY \
+            -e BACKEND_URL=$BACKEND_URL \
+            -e AWS_S3_BUCKET=$AWS_S3_BUCKET \
+            -e AI_AGENT_ENABLED=$AI_AGENT_ENABLED \
+            -e OPENAI_API_KEY=$OPENAI_API_KEY \
+            --restart=always \
+            260125007066.dkr.ecr.us-east-2.amazonaws.com/vellora/backend:latest \
+            python -m app.worker

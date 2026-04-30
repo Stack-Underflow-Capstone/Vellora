@@ -1,0 +1,11 @@
+# --- Virtual Environment ---
+.venv/
+venv/
+ENV/
+env/
+.env
+.DS_Store
+
+.env
+
+.idea/

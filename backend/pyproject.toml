@@ -1,0 +1,16 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--asyncio-mode=auto"
+]
+markers = [
+    "asyncio: mark test as an async test",
+    "integration: mark test as an integration test (requires database)",
+]
+asyncio_mode = "auto"

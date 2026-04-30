@@ -1,0 +1,124 @@
+services:
+  localstack:
+    networks:
+      - vellora_network
+    image: localstack/localstack-pro
+    container_name: localstack
+    environment:
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
+      - SERVICES=s3,sqs,lambda,rds,cloudfront,ses # we'll add sqs/lambda later
+      - AWS_DEFAULT_REGION=us-east-1
+      - LOCALSTACK_HOST=localhost.localstack.cloud
+    ports:
+      - "4566:4566" # LocalStack edge endpoint
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - "./init-resources.sh:/etc/localstack/init/ready.d/init-resources.sh"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:4566/_localstack/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  postgres:
+    networks:
+      - vellora_network
+    image: postgres:17.4
+    container_name: vellora_postgres_service
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: Vellora
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  backend:
+    networks:
+      - vellora_network
+    build:
+      context: ./backend # Points to the backend folder
+      dockerfile: Dockerfile
+    container_name: vellora_backend_service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - postgres
+      - localstack
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - FERNET_KEY=${FERNET_KEY}
+      - OAUTH_PROVIDERS__GOOGLE__CLIENT_ID=${OAUTH_PROVIDERS__GOOGLE__CLIENT_ID}
+      - OAUTH_PROVIDERS__GOOGLE__CLIENT_SECRET=${OAUTH_PROVIDERS__GOOGLE__CLIENT_SECRET}
+      - OAUTH_PROVIDERS__GOOGLE__REDIRECT_URI=${OAUTH_PROVIDERS__GOOGLE__REDIRECT_URI}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - OAUTH_PROVIDERS__GOOGLE__SCOPES=${OAUTH_PROVIDERS__GOOGLE__SCOPES}
+      - OAUTH_STATE_TTL_SECONDS=${OAUTH_STATE_TTL_SECONDS}
+      - USE_LOCALSTACK=${USE_LOCALSTACK}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - LOCALSTACK_ENDPOINT=${LOCALSTACK_ENDPOINT}
+      - REPORTS_BUCKET=${REPORTS_BUCKET}
+      - REPORTS_QUEUE=${REPORTS_QUEUE}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_S3_ENDPOINT_URL=${AWS_S3_ENDPOINT_URL}
+    entrypoint: /app/wait-for-postgres.sh
+
+  worker:
+    networks:
+      - vellora_network
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vellora_worker_service
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_started
+      localstack:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    command: ./wait-for-queue.sh
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - FERNET_KEY=${FERNET_KEY}
+      - OAUTH_PROVIDERS__GOOGLE__CLIENT_ID=${OAUTH_PROVIDERS__GOOGLE__CLIENT_ID}
+      - OAUTH_PROVIDERS__GOOGLE__CLIENT_SECRET=${OAUTH_PROVIDERS__GOOGLE__CLIENT_SECRET}
+      - OAUTH_PROVIDERS__GOOGLE__REDIRECT_URI=${OAUTH_PROVIDERS__GOOGLE__REDIRECT_URI}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - OAUTH_PROVIDERS__GOOGLE__SCOPES=${OAUTH_PROVIDERS__GOOGLE__SCOPES}
+      - OAUTH_STATE_TTL_SECONDS=${OAUTH_STATE_TTL_SECONDS}
+      - USE_LOCALSTACK=${USE_LOCALSTACK}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - LOCALSTACK_ENDPOINT=${LOCALSTACK_ENDPOINT}
+      - REPORTS_BUCKET=${REPORTS_BUCKET}
+      - REPORTS_QUEUE=${REPORTS_QUEUE}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_S3_ENDPOINT_URL=${AWS_S3_ENDPOINT_URL}
+  frontend:
+    networks:
+      - vellora_network
+    build:
+      context: ./frontend/Vellora # Points to the frontend folder
+      dockerfile: Dockerfile
+    container_name: vellora_frontend_service
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+
+
+networks:
+  vellora_network:
+    name: vellora_network

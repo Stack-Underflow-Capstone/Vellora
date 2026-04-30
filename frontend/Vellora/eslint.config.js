@@ -7,4 +7,11 @@ module.exports = defineConfig([
   {
     ignores: ['dist/*'],
   },
+  {
+  "settings": {
+    "import/resolver": {
+      "typescript": {}
+    }
+  }
+}
 ]);
