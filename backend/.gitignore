@@ -17,3 +17,16 @@ env/
 # --- Alembic Cache ---
 app/infra/migrations/__pycache__/
 app/infra/migrations/versions/__pycache__/
+
+# --- Coverage / test artifacts ---
+.coverage
+htmlcov/
+.cache/
+pytest_cache/
+.tox/
+.mypy_cache/
+.pytest_cache/
+coverage.xml
+nosetests.xml
+test-results/
+*.log

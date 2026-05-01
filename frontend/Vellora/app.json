@@ -4,33 +4,66 @@
     "slug": "Vellora",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./app/assets/Vellora_App_Icon.png",
     "scheme": "vellora",
+    "owner": "vellora",
+    "deeplinks": [
+      "auth/google/callback"
+    ],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "remote-notification"
+        ],
+        "NSLocationWhenInUseUsageDescription": "This app requires access to your location when open.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app requires access to your location even when closed.",
+        "NSLocationAlwaysUsageDescription": "This app requires access to your location when open.",
+        "deploymentTarget": "14",
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSExceptionDomains": {
+            "18.216.218.184": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSIncludesSubdomains": false
+            }
+          }
+        }
+      },
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.Vellora"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./app/assets/Vellora_App_Icon.png",
+        "backgroundImage": "./app/assets/Vellora_App_Icon.png",
+        "monochromeImage": "./app/assets/Vellora_App_Icon.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
+      ],
+      "package": "com.anonymous.Vellora"
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./app/assets/Vellora_Dark_Logo.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./app/assets/Vellora_Dark_Logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
@@ -38,11 +71,42 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location.",
+          "locationAlwaysPermission": "Allow $(PRODUCT_NAME) to use your location.",
+          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMAPBOX_MAPS_DOWNLOAD_TOKEN": "process.env.MAPBOX_PRIVATE_ACCESS_TOKEN",
+          "RNMapboxAccessToken": "process.env.EXPO_PUBLIC_API_KEY_MAPBOX_PUBLIC_ACCESS_TOKEN",
+          "RNMapboxVersion": "10.2.6"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      "expo-notifications",
+      "expo-image-picker",
+      "@react-native-community/datetimepicker",
+      "expo-image",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b9456286-bf2a-4b62-81e6-b0ddea9c23b2"
+      }
     }
   }
 }
